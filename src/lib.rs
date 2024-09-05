@@ -7,8 +7,6 @@
 #![deny(warnings)]
 #![no_std]
 
-use defmt::*;
-
 /// A structure to facilitate the decoding of a DCF77 signal which consists of 59 consecutive bits
 /// of data
 pub struct DCF77Time(pub u64);
@@ -82,43 +80,23 @@ impl DCF77Time {
         minutes
     }
 
+    fn calculate_parity(&self, start: usize, end: usize) -> bool {
+        let mut parity = false;
+        let mut mask: u64 = 1 << start;
+        for _ in start..=end {
+            parity ^= (self.0 & mask) != 0;
+            mask = mask.wrapping_shl(1);
+        }
+        parity
+    }
+
     /// Return the current minutes of the hour and verify parity and value < 60
     pub fn minutes(&self) -> Result<u8, ()> {
-        let mut parity = false;
-        if (self.0 & (1 << 21)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 22)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 23)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 24)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 25)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 26)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 27)) != 0 {
-            parity ^= true;
-        }
+        let parity = self.calculate_parity(21, 27);
 
         let minutes = self.minutes_unchecked();
-        if minutes > 59 {
-            return Err(());
-        }
 
-        if ((self.0 & (1 << 28)) != 0) != parity {
+        if ((self.0 & (1 << 28)) != 0) != parity || minutes > 59 {
             Err(())
         } else {
             Ok(minutes)
@@ -157,37 +135,11 @@ impl DCF77Time {
 
     /// Return the current hours of the day and verify parity and value < 23
     pub fn hours(&self) -> Result<u8, ()> {
-        let mut parity = false;
-        if (self.0 & (1 << 29)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 30)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 31)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 32)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 33)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 34)) != 0 {
-            parity ^= true;
-        }
+        let parity = self.calculate_parity(29, 34);
 
         let hours = self.hours_unchecked();
-        if hours > 23 {
-            return Err(());
-        }
 
-        if ((self.0 & (1 << 35)) != 0) != parity {
+        if ((self.0 & (1 << 35)) != 0) != parity || hours > 23 {
             Err(())
         } else {
             Ok(hours)
@@ -235,7 +187,7 @@ impl DCF77Time {
     }
 
     /// Return the current day of the week (without verifying the information)
-    /// 0 meaning Monday
+    /// 1 meaning Monday ... 7 meaning Sunday
     pub fn weekday_unchecked(&self) -> u8 {
         let mut weekday = 0;
         if (self.0 & (1 << 42)) != 0 {
@@ -318,94 +270,7 @@ impl DCF77Time {
 
     /// Return a tuple of (year, month, day, weekday) if it passes a parity check
     pub fn date(&self) -> Result<(u16, u8, u8, u8), ()> {
-        let mut parity = false;
-        if (self.0 & (1 << 36)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 37)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 38)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 39)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 40)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 41)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 42)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 43)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 44)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 45)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 46)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 47)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 48)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 49)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 50)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 51)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 52)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 53)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 54)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 55)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 56)) != 0 {
-            parity ^= true;
-        }
-
-        if (self.0 & (1 << 57)) != 0 {
-            parity ^= true;
-        }
+        let parity = self.calculate_parity(36, 57);
 
         if ((self.0 & (1 << 58)) != 0) != parity {
             return Err(());
@@ -554,7 +419,6 @@ impl SimpleDCF77Decoder {
                         SimpleDCF77DecoderState::BitReceived
                     } else {
                         // Bad signal, let's continue with the next bit
-                        println!("Faulty bit at position {}", datapos);
                         self.datapos = 0;
                         SimpleDCF77DecoderState::FaultyBit
                     }
