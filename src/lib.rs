@@ -7,8 +7,10 @@
 #![deny(warnings)]
 #![no_std]
 
+use defmt::*;
+
 /// A structure to facilitate the decoding of a DCF77 signal which consists of 59 consecutive bits
-/// of data 
+/// of data
 pub struct DCF77Time(pub u64);
 
 impl DCF77Time {
@@ -432,13 +434,20 @@ enum SimpleDCF77DecoderState {
 }
 
 /// A structure for a simple timeslot based DCF77 decoder
-pub struct SimpleDCF77Decoder  {
+pub struct SimpleDCF77Decoder {
+    /// Number of samples since the last phase change
     scancount: u8,
+    /// Number of low bits in the current phase
     lowcount: u8,
+    /// Number of high bits in the current phase
     highcount: u8,
+    /// Number of idle bits after a valid bit was received
     idlecount: u8,
+    /// Current state of the decoder
     state: SimpleDCF77DecoderState,
+    /// The raw data received from the DCF77 signal
     data: u64,
+    /// Current position in the bitstream
     datapos: usize,
 }
 
@@ -505,7 +514,9 @@ impl SimpleDCF77Decoder {
     /// current position and value of the DCF77 signal bitstream
     pub fn read_bit(&mut self, bit: bool) {
         self.state = match self.state {
-            SimpleDCF77DecoderState::EndOfCycle | SimpleDCF77DecoderState::WaitingForPhase | SimpleDCF77DecoderState::FaultyBit => {
+            SimpleDCF77DecoderState::EndOfCycle
+            | SimpleDCF77DecoderState::WaitingForPhase
+            | SimpleDCF77DecoderState::FaultyBit => {
                 if bit {
                     self.lowcount = 1;
                     self.highcount = 0;
@@ -543,6 +554,8 @@ impl SimpleDCF77Decoder {
                         SimpleDCF77DecoderState::BitReceived
                     } else {
                         // Bad signal, let's continue with the next bit
+                        println!("Faulty bit at position {}", datapos);
+                        self.datapos = 0;
                         SimpleDCF77DecoderState::FaultyBit
                     }
                 }
@@ -556,6 +569,7 @@ impl SimpleDCF77Decoder {
                     if self.idlecount > 10 {
                         self.idlecount = 0;
                         self.scancount = 0;
+                        self.datapos = 0;
                     }
                     SimpleDCF77DecoderState::WaitingForPhase
                 } else {
