@@ -48,52 +48,12 @@ impl DCF77Time {
 
     /// Return the current minutes of the hour (without verifying the information)
     pub fn minutes_unchecked(&self) -> u8 {
-        let mut minutes = 0;
-        if (self.0 & (1 << 21)) != 0 {
-            minutes += 1;
-        }
-
-        if (self.0 & (1 << 22)) != 0 {
-            minutes += 2;
-        }
-
-        if (self.0 & (1 << 23)) != 0 {
-            minutes += 4;
-        }
-
-        if (self.0 & (1 << 24)) != 0 {
-            minutes += 8;
-        }
-
-        if (self.0 & (1 << 25)) != 0 {
-            minutes += 10;
-        }
-
-        if (self.0 & (1 << 26)) != 0 {
-            minutes += 20;
-        }
-
-        if (self.0 & (1 << 27)) != 0 {
-            minutes += 40;
-        }
-
-        minutes
-    }
-
-    fn calculate_parity(&self, start: usize, end: usize) -> bool {
-        let mut parity = false;
-        let mut mask: u64 = 1 << start;
-        for _ in start..=end {
-            parity ^= (self.0 & mask) != 0;
-            mask = mask.wrapping_shl(1);
-        }
-        parity
+        self.calculate_2digit_bcd(21, 27)
     }
 
     /// Return the current minutes of the hour and verify parity and value < 60
     pub fn minutes(&self) -> Result<u8, ()> {
         let parity = self.calculate_parity(21, 27);
-
         let minutes = self.minutes_unchecked();
 
         if ((self.0 & (1 << 28)) != 0) != parity || minutes > 59 {
@@ -105,38 +65,12 @@ impl DCF77Time {
 
     /// Return the current hours of the day (without verifying the information)
     pub fn hours_unchecked(&self) -> u8 {
-        let mut hours = 0;
-        if (self.0 & (1 << 29)) != 0 {
-            hours += 1;
-        }
-
-        if (self.0 & (1 << 30)) != 0 {
-            hours += 2;
-        }
-
-        if (self.0 & (1 << 31)) != 0 {
-            hours += 4;
-        }
-
-        if (self.0 & (1 << 32)) != 0 {
-            hours += 8;
-        }
-
-        if (self.0 & (1 << 33)) != 0 {
-            hours += 10;
-        }
-
-        if (self.0 & (1 << 34)) != 0 {
-            hours += 20;
-        }
-
-        hours
+        self.calculate_2digit_bcd(29, 34)
     }
 
     /// Return the current hours of the day and verify parity and value < 23
     pub fn hours(&self) -> Result<u8, ()> {
         let parity = self.calculate_parity(29, 34);
-
         let hours = self.hours_unchecked();
 
         if ((self.0 & (1 << 35)) != 0) != parity || hours > 23 {
@@ -148,32 +82,7 @@ impl DCF77Time {
 
     /// Return the current day of month (without verifying the information)
     pub fn day_unchecked(&self) -> u8 {
-        let mut day = 0;
-        if (self.0 & (1 << 36)) != 0 {
-            day += 1;
-        }
-
-        if (self.0 & (1 << 37)) != 0 {
-            day += 2;
-        }
-
-        if (self.0 & (1 << 38)) != 0 {
-            day += 4;
-        }
-
-        if (self.0 & (1 << 39)) != 0 {
-            day += 8;
-        }
-
-        if (self.0 & (1 << 40)) != 0 {
-            day += 10;
-        }
-
-        if (self.0 & (1 << 41)) != 0 {
-            day += 20;
-        }
-
-        day
+        self.calculate_2digit_bcd(36, 41)
     }
 
     /// Return the current day of month and do a basic value check
@@ -189,83 +98,18 @@ impl DCF77Time {
     /// Return the current day of the week (without verifying the information)
     /// 1 meaning Monday ... 7 meaning Sunday
     pub fn weekday_unchecked(&self) -> u8 {
-        let mut weekday = 0;
-        if (self.0 & (1 << 42)) != 0 {
-            weekday += 1;
-        }
-
-        if (self.0 & (1 << 43)) != 0 {
-            weekday += 2;
-        }
-
-        if (self.0 & (1 << 44)) != 0 {
-            weekday += 4;
-        }
-        weekday
+        self.calculate_2digit_bcd(42, 44)
     }
 
     /// Return the current month of the year (without verifying the information)
     pub fn month_unchecked(&self) -> u8 {
-        let mut month = 0;
-        if (self.0 & (1 << 45)) != 0 {
-            month += 1;
-        }
-
-        if (self.0 & (1 << 46)) != 0 {
-            month += 2;
-        }
-
-        if (self.0 & (1 << 47)) != 0 {
-            month += 4;
-        }
-
-        if (self.0 & (1 << 48)) != 0 {
-            month += 8;
-        }
-
-        if (self.0 & (1 << 49)) != 0 {
-            month += 10;
-        }
-
-        month
+        self.calculate_2digit_bcd(45, 49)
     }
 
     /// Return the current year (without verifying the information)
     pub fn year_unchecked(&self) -> u16 {
-        let mut year = 2000;
-        if (self.0 & (1 << 50)) != 0 {
-            year += 1;
-        }
-
-        if (self.0 & (1 << 51)) != 0 {
-            year += 2;
-        }
-
-        if (self.0 & (1 << 52)) != 0 {
-            year += 4;
-        }
-
-        if (self.0 & (1 << 53)) != 0 {
-            year += 8;
-        }
-
-        if (self.0 & (1 << 54)) != 0 {
-            year += 10;
-        }
-
-        if (self.0 & (1 << 55)) != 0 {
-            year += 20;
-        }
-
-        if (self.0 & (1 << 56)) != 0 {
-            year += 40;
-        }
-
-        if (self.0 & (1 << 57)) != 0 {
-            year += 80;
-        }
-
-        year
+        let century: u16 = 2000;
+        century + <u8 as Into<u16>>::into(self.calculate_2digit_bcd(50, 57))
     }
 
     /// Return a tuple of (year, month, day, weekday) if it passes a parity check
@@ -287,6 +131,25 @@ impl DCF77Time {
             Ok((year, month, day, weekday))
         }
     }
+
+    fn calculate_parity(&self, start: usize, end: usize) -> bool {
+        let mut parity = false;
+        let mut mask: u64 = 1 << start;
+        for _ in start..=end {
+            parity ^= (self.0 & mask) != 0;
+            mask = mask.wrapping_shl(1);
+        }
+        parity
+    }
+
+    fn calculate_2digit_bcd(&self, start: usize, end: usize) -> u8 {
+        let length = end - start + 1;
+        let mask = (1u64 << length) - 1;
+        let bcd = (self.0 >> start) & mask;
+        let high_nibble: u8 = (bcd & 0xF0) as u8 >> 4;
+        let low_nibble: u8 = bcd as u8 & 0x0F;
+        high_nibble * 10 + low_nibble
+    }
 }
 
 enum SimpleDCF77DecoderState {
@@ -300,13 +163,13 @@ enum SimpleDCF77DecoderState {
 
 /// A structure for a simple timeslot based DCF77 decoder
 pub struct SimpleDCF77Decoder {
-    /// Number of samples since the last phase change
+    /// Number of samples since the last phase change, that always starts with a high signal and is max 2000 ms long
     scancount: u8,
-    /// Number of low bits in the current phase
+    /// Number of high bits during the first 100 ms in the scan phase to check if it might be a transmitted 0
     lowcount: u8,
-    /// Number of high bits in the current phase
+    /// Number of high bits between 100 and 200 ms in the scan phase to check if it might be a transmitted 1
     highcount: u8,
-    /// Number of idle bits after a valid bit was received
+    /// Number of idle bits after a valid bit was detected
     idlecount: u8,
     /// Current state of the decoder
     state: SimpleDCF77DecoderState,
@@ -319,7 +182,15 @@ pub struct SimpleDCF77Decoder {
 /// The SimpleDCF77Decoder implements a simple state machine to decode a DCF77 signal from a fed-in
 /// readout of a GPIO pin connected to a DCF77 receiver. To use this, create the structure, set up
 /// the GPIO pin the receiver is connected to as an input and call the `read_bit` method every
-/// 10ms with a parameter value of `true` for a high signal level or `false` for a low signal level
+/// 10ms with a parameter value of `true` for a high signal (low rf amplitude) level or `false` for a low signal level (high rf amplitude).
+/// 
+/// Example Signal of the DCF77 receiver output:
+/// 
+/// ```text
+///       100ms               900ms                  200ms              800ms             100ms      
+///        ___                                      _______                                ___
+/// ... __|   |____________________________________|       |______________________________|   |____ ...
+/// ```
 impl SimpleDCF77Decoder {
     /// Create a new decoder state machine
     pub fn new() -> Self {
@@ -379,6 +250,7 @@ impl SimpleDCF77Decoder {
     /// current position and value of the DCF77 signal bitstream
     pub fn read_bit(&mut self, bit: bool) {
         self.state = match self.state {
+            // wait for the first phase change 0->1 or abort if no phase change is detected within 1800 ms (180 samples)
             SimpleDCF77DecoderState::EndOfCycle
             | SimpleDCF77DecoderState::WaitingForPhase
             | SimpleDCF77DecoderState::FaultyBit => {
@@ -398,6 +270,8 @@ impl SimpleDCF77Decoder {
                     }
                 }
             }
+            // count the number of high bits in the first 100 ms and the second 100 ms to determine
+            // if a 0 or 1 was transmitted
             SimpleDCF77DecoderState::PhaseFound => {
                 if self.scancount < 20 {
                     if bit {
@@ -424,6 +298,8 @@ impl SimpleDCF77Decoder {
                     }
                 }
             }
+            // wait until the 900 ms of the bit are over and then check if the signal was idle for
+            // at least 100 ms to start the next bit
             SimpleDCF77DecoderState::BitReceived | SimpleDCF77DecoderState::Idle => {
                 if bit {
                     self.idlecount += 1;
