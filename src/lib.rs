@@ -247,8 +247,7 @@ impl SimpleDCF77Decoder {
     pub fn read_bit(&mut self, bit: bool) {
         self.state = match self.state {
             // wait for the first phase change 0->1 or abort if no phase change is detected within
-            // 1800 ms
-            // (180 samples)
+            // 1800 ms (180 samples)
             SimpleDCF77DecoderState::EndOfCycle
             | SimpleDCF77DecoderState::WaitingForPhase
             | SimpleDCF77DecoderState::FaultyBit => {
