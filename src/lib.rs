@@ -163,13 +163,16 @@ enum SimpleDCF77DecoderState {
 
 /// A structure for a simple timeslot based DCF77 decoder
 pub struct SimpleDCF77Decoder {
-    /// Number of samples since the last phase change, that always starts with a high signal and is max 2000 ms long
+    /// Number of samples since the last phase change, that always starts with a high signal and is
+    /// max 2000 ms long
     scancount: u8,
-    /// Number of high bits during the first 100 ms in the scan phase to check if it might be a transmitted 0
+    /// Number of high samples during the first 100 ms in the scan phase to check if it might be a
+    /// transmitted 0
     lowcount: u8,
-    /// Number of high bits between 100 and 200 ms in the scan phase to check if it might be a transmitted 1
+    /// Number of high samples between 100 and 200 ms in the scan phase to check if it might be a
+    /// transmitted 1
     highcount: u8,
-    /// Number of idle bits after a valid bit was detected
+    /// Number of idle samples after a valid bit was detected
     idlecount: u8,
     /// Current state of the decoder
     state: SimpleDCF77DecoderState,
@@ -182,14 +185,24 @@ pub struct SimpleDCF77Decoder {
 /// The SimpleDCF77Decoder implements a simple state machine to decode a DCF77 signal from a fed-in
 /// readout of a GPIO pin connected to a DCF77 receiver. To use this, create the structure, set up
 /// the GPIO pin the receiver is connected to as an input and call the `read_bit` method every
-/// 10ms with a parameter value of `true` for a high signal (low rf amplitude) level or `false` for a low signal level (high rf amplitude).
-/// 
-/// Example Signal of the DCF77 receiver output:
-/// 
+/// 10ms with a parameter value of `true` for a high signal (low rf amplitude) level or `false` for
+/// a low signal level
+/// (high rf amplitude).
+///
+/// Example Signal:
+///
 /// ```text
-///       100ms               900ms                  200ms              800ms             100ms      
-///        ___                                      _______                                ___
-/// ... __|   |____________________________________|       |______________________________|   |____ ...
+/// DCF77 RF signal:
+///
+///    |     |||||||||||||||||||||||||||||||||||||        |||||||||||||||||||||||||||||||    |||
+///    |     |||||||||||||||||||||||||||||||||||||        |||||||||||||||||||||||||||||||    |||
+///    |     |||||||||||||||||||||||||||||||||||||        |||||||||||||||||||||||||||||||    |||
+/// ...|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||...
+///
+/// DCF77 receiver output that can be fed into this state machine:
+///      ___                                      _______                                ___
+/// ..._|   |____________________________________|       |______________________________|   |___...
+///     100ms               900ms                  200ms              800ms             100ms      
 /// ```
 impl SimpleDCF77Decoder {
     /// Create a new decoder state machine
@@ -250,7 +263,9 @@ impl SimpleDCF77Decoder {
     /// current position and value of the DCF77 signal bitstream
     pub fn read_bit(&mut self, bit: bool) {
         self.state = match self.state {
-            // wait for the first phase change 0->1 or abort if no phase change is detected within 1800 ms (180 samples)
+            // wait for the first phase change 0->1 or abort if no phase change is detected within
+            // 1800 ms
+            // (180 samples)
             SimpleDCF77DecoderState::EndOfCycle
             | SimpleDCF77DecoderState::WaitingForPhase
             | SimpleDCF77DecoderState::FaultyBit => {
