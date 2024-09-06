@@ -165,21 +165,21 @@ enum SimpleDCF77DecoderState {
 pub struct SimpleDCF77Decoder {
     /// Number of samples since the last phase change, that always starts with a high signal and is
     /// max 2000 ms long
-    scancount: u8,
+    sample_count: u8,
     /// Number of high samples during the first 100 ms in the scan phase to check if it might be a
     /// transmitted 0
-    lowcount: u8,
+    zero_bit_count: u8,
     /// Number of high samples between 100 and 200 ms in the scan phase to check if it might be a
     /// transmitted 1
-    highcount: u8,
-    /// Number of idle samples after a valid bit was detected
-    idlecount: u8,
+    one_bit_count: u8,
+    /// Number of non-idle samples after a valid bit was detected
+    non_idle_count: u8,
     /// Current state of the decoder
     state: SimpleDCF77DecoderState,
     /// The raw data received from the DCF77 signal
     data: u64,
     /// Current position in the bitstream
-    datapos: usize,
+    data_pos: usize,
 }
 
 /// The SimpleDCF77Decoder implements a simple state machine to decode a DCF77 signal from a fed-in
@@ -191,13 +191,13 @@ impl SimpleDCF77Decoder {
     /// Create a new decoder state machine
     pub fn new() -> Self {
         Self {
-            scancount: 0,
-            lowcount: 0,
-            highcount: 0,
-            idlecount: 0,
+            sample_count: 0,
+            zero_bit_count: 0,
+            one_bit_count: 0,
+            non_idle_count: 0,
             state: SimpleDCF77DecoderState::WaitingForPhase,
             data: 0,
-            datapos: 0,
+            data_pos: 0,
         }
     }
 
@@ -233,13 +233,13 @@ impl SimpleDCF77Decoder {
     /// Returns the value of the latest received bit. Mainly useful for live display of the
     /// received bits
     pub fn latest_bit(&self) -> bool {
-        (self.data & (1 << (self.datapos - 1))) != 0
+        (self.data & (1 << (self.data_pos - 1))) != 0
     }
 
     /// Return the current position of the bit counter after the latest recognized end of a cycle
     /// which is identical to the current second of the minute
     pub fn seconds(&self) -> usize {
-        self.datapos
+        self.data_pos
     }
 
     /// Ingest the latest sample of the GPIO input the DCF77 receiver is connected to judge the /
@@ -252,15 +252,15 @@ impl SimpleDCF77Decoder {
             | SimpleDCF77DecoderState::WaitingForPhase
             | SimpleDCF77DecoderState::FaultyBit => {
                 if bit {
-                    self.lowcount = 1;
-                    self.highcount = 0;
-                    self.scancount = 0;
+                    self.zero_bit_count = 1;
+                    self.one_bit_count = 0;
+                    self.sample_count = 0;
+                    self.non_idle_count = 0;
                     SimpleDCF77DecoderState::PhaseFound
                 } else {
-                    if self.scancount > 180 {
-                        self.datapos = 0;
-                        self.scancount = 0;
-
+                    if self.sample_count > 180 {
+                        self.data_pos = 0;
+                        self.sample_count = 0;
                         SimpleDCF77DecoderState::EndOfCycle
                     } else {
                         SimpleDCF77DecoderState::WaitingForPhase
@@ -270,51 +270,53 @@ impl SimpleDCF77Decoder {
             // count the number of high bits in the first 100 ms and the second 100 ms to determine
             // if a 0 or 1 was transmitted
             SimpleDCF77DecoderState::PhaseFound => {
-                if self.scancount < 20 {
+                if self.sample_count < 20 {
                     if bit {
-                        if self.scancount < 10 {
-                            self.lowcount += 1;
+                        if self.sample_count < 10 {
+                            self.zero_bit_count += 1;
                         } else {
-                            self.highcount += 1;
+                            self.one_bit_count += 1;
                         }
                     }
                     SimpleDCF77DecoderState::PhaseFound
                 } else {
-                    let datapos = self.datapos;
-                    self.datapos += 1;
-                    if self.highcount > 3 {
-                        self.data |= 1 << datapos;
+                    let data_pos = self.data_pos;
+                    self.data_pos += 1;
+                    if self.one_bit_count > 3 {
+                        self.data |= 1 << data_pos;
                         SimpleDCF77DecoderState::BitReceived
-                    } else if self.lowcount > 3 {
-                        self.data &= !(1 << datapos);
+                    } else if self.zero_bit_count > 3 {
+                        self.data &= !(1 << data_pos);
                         SimpleDCF77DecoderState::BitReceived
                     } else {
-                        // Bad signal, let's continue with the next bit
-                        self.datapos = 0;
+                        // Bad signal, let's start over
+                        self.data_pos = 0;
                         SimpleDCF77DecoderState::FaultyBit
                     }
                 }
             }
-            // wait until the 900 ms of the bit are over and then check if the signal was idle for
-            // at least 100 ms to start the next bit
+            // wait until the 900 ms of the bit are over and then check if the signal was not idle
+            // for max 10 samples to start the next bit
             SimpleDCF77DecoderState::BitReceived | SimpleDCF77DecoderState::Idle => {
                 if bit {
-                    self.idlecount += 1;
+                    self.non_idle_count += 1;
                 }
 
-                if self.scancount >= 90 {
-                    if self.idlecount > 10 {
-                        self.idlecount = 0;
-                        self.scancount = 0;
-                        self.datapos = 0;
+                if self.sample_count >= 90 {
+                    if self.non_idle_count < 10 {
+                        SimpleDCF77DecoderState::WaitingForPhase
                     }
-                    SimpleDCF77DecoderState::WaitingForPhase
+                    else{
+                        // Bad signal, let's start over
+                        self.data_pos = 0;
+                        SimpleDCF77DecoderState::FaultyBit
+                    }
                 } else {
                     SimpleDCF77DecoderState::Idle
                 }
             }
         };
 
-        self.scancount += 1;
+        self.sample_count += 1;
     }
 }
