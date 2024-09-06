@@ -186,24 +186,7 @@ pub struct SimpleDCF77Decoder {
 /// readout of a GPIO pin connected to a DCF77 receiver. To use this, create the structure, set up
 /// the GPIO pin the receiver is connected to as an input and call the `read_bit` method every
 /// 10ms with a parameter value of `true` for a high signal (low rf amplitude) level or `false` for
-/// a low signal level
-/// (high rf amplitude).
-///
-/// Example Signal:
-///
-/// ```text
-/// DCF77 RF signal:
-///
-///    |     |||||||||||||||||||||||||||||||||||||        |||||||||||||||||||||||||||||||    |||
-///    |     |||||||||||||||||||||||||||||||||||||        |||||||||||||||||||||||||||||||    |||
-///    |     |||||||||||||||||||||||||||||||||||||        |||||||||||||||||||||||||||||||    |||
-/// ...|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||...
-///
-/// DCF77 receiver output that can be fed into this state machine:
-///      ___                                      _______                                ___
-/// ..._|   |____________________________________|       |______________________________|   |___...
-///     100ms               900ms                  200ms              800ms             100ms      
-/// ```
+/// a low signal level (high rf amplitude).
 impl SimpleDCF77Decoder {
     /// Create a new decoder state machine
     pub fn new() -> Self {
